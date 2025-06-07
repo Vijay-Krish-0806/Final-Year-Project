@@ -14,6 +14,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 export const upsertUserProgress = async (courseId: number) => {
+  console.log("upsert")
   const { userId } = await auth();
   const user = await currentUser();
 
@@ -25,9 +26,9 @@ export const upsertUserProgress = async (courseId: number) => {
     throw new Error("Course not found");
   }
 
-  if (!course.units.length || !course.units[0].lessons.length) {
-    throw new Error("Course is empty");
-  }
+  // if (!course.units.length || !course.units[0].lessons.length) {
+  //   throw new Error("Course is empty");
+  // }
 
   const existingUserProgress = await getUserProgress();
   if (existingUserProgress) {
@@ -40,6 +41,7 @@ export const upsertUserProgress = async (courseId: number) => {
     revalidatePath("/learn");
     redirect("/learn");
   }
+
   await db.insert(userProgress).values({
     userId,
     activeCourseId: courseId,

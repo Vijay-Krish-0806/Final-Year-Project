@@ -11,22 +11,25 @@ import { UnitEdit } from "./unit/edit";
 const dataProvider = simpleRestProvider("/api");
 const App = () => {
   return (
-    <Admin dataProvider={dataProvider}>
-      <Resource
-        name="courses"
-        list={CourseList}
-        recordRepresentation="title"
-        create={CourseCreate}
-        edit={CourseEdit}
-      />
-      <Resource
-        name="units"
-        list={UnitList}
-        recordRepresentation="title"
-        create={UnitCreate}
-        edit={UnitEdit}
-      />
-    </Admin>
+    <div className="flex flex-col">
+      
+      <Admin dataProvider={dataProvider}>
+        <Resource
+          name="courses"
+          list={CourseList}
+          recordRepresentation="title"
+          create={CourseCreate}
+          edit={CourseEdit}
+        />
+        <Resource
+          name="units"
+          list={UnitList}
+          recordRepresentation="title"
+          create={UnitCreate}
+          edit={UnitEdit}
+        />
+      </Admin>
+    </div>
   );
 };
 
