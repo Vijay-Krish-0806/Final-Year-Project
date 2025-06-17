@@ -2,6 +2,9 @@
 import ollama from "ollama";
 
 export interface AssessmentResult {
+  skillLevel: any;
+  weakAreas: any;
+  recommendedTopics: any;
   level: "beginner" | "intermediate" | "advanced";
   score: number;
   strengths: string[];

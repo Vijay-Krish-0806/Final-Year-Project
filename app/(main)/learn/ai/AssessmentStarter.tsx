@@ -9,94 +9,188 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, Brain, Target } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
-interface AssessmentStarterProps {
+interface Props {
   courseId: number;
-  language: string;
-  onAssessmentCreated: (data: { unitId: number; lessonId: number }) => void;
+  courseName: string;
 }
 
-export const AssessmentStarter = ({
-  courseId,
-  language,
-  onAssessmentCreated,
-}: AssessmentStarterProps) => {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export const AssessmentStarter = ({ courseId, courseName }: Props) => {
+  const [isCreating, setIsCreating] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [assessmentLessonId, setAssessmentLessonId] = useState<number | null>(
+    null
+  );
+  const router = useRouter();
 
-  const handleGenerateAssessment = async () => {
-    setIsGenerating(true);
-    setError(null);
-
+  const createAssessment = async () => {
+    setIsCreating(true);
     try {
-      console.log("calling API")
       const response = await fetch("/api/ai/assessment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courseId, language }),
+        body: JSON.stringify({ courseId }),
       });
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to generate assessment");
-      }
 
-      onAssessmentCreated(result.data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const data = await response.json();
+
+      if (data.success) {
+        setAssessmentLessonId(data.lessonId);
+        toast.success(
+          "Assessment lesson created! Start learning to get personalized lessons."
+        );
+        router.push(`/lesson/${data.lessonId}`);
+      } else {
+        toast.error(data.error || "Failed to create assessment");
+      }
+    } catch (error) {
+      toast.error("Something went wrong");
     } finally {
-      setIsGenerating(false);
+      setIsCreating(false);
+    }
+  };
+
+  const analyzeAndGenerate = async () => {
+    if (!assessmentLessonId) return;
+
+    setIsAnalyzing(true);
+    try {
+      // First analyze the assessment
+      const analyzeResponse = await fetch("/api/ai/analyze-assessment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lessonId: assessmentLessonId, courseId }),
+      });
+
+      const analyzeData = await analyzeResponse.json();
+
+      if (analyzeData.success) {
+        // Then generate personalized units
+        const generateResponse = await fetch("/api/ai/generate-units", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            courseId,
+            assessmentResult: analyzeData.assessmentResult,
+            numberOfUnits: 3,
+          }),
+        });
+
+        const generateData = await generateResponse.json();
+
+        if (generateData.success) {
+          toast.success(
+            `${generateData.unitsCreated} personalized units created!`
+          );
+          router.push("/learn");
+        } else {
+          toast.error(generateData.error || "Failed to generate units");
+        }
+      } else {
+        toast.error(analyzeData.error || "Failed to analyze assessment");
+      }
+    } catch (error) {
+      toast.error("Something went wrong");
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader className="text-center">
-        <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-          <Brain className="w-6 h-6 text-blue-600" />
-        </div>
-        <CardTitle>AI-Powered Assessment</CardTitle>
+    <Card className="w-full max-w-2xl mx-auto">
+      <CardHeader>
+        <CardTitle>🤖 AI-Powered Learning for {courseName}</CardTitle>
         <CardDescription>
-          Let's create a personalized learning path for your {language} journey
+          Get personalized lessons based on your current knowledge level
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Target className="w-4 h-4" />
-            <span>15 carefully crafted questions</span>
+      <CardContent className="space-y-6">
+        <div className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold">
+              1
+            </div>
+            <div>
+              <h3 className="font-semibold">Take Assessment</h3>
+              <p className="text-sm text-muted-foreground">
+                Complete a 15-question assessment to determine your skill level
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Brain className="w-4 h-4" />
-            <span>AI analyzes your performance</span>
+
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 rounded-full bg-gray-300 text-white flex items-center justify-center text-sm font-bold">
+              2
+            </div>
+            <div>
+              <h3 className="font-semibold">AI Analysis</h3>
+              <p className="text-sm text-muted-foreground">
+                Our AI analyzes your performance and identifies
+                strengths/weaknesses
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Target className="w-4 h-4" />
-            <span>Personalized curriculum generation</span>
+
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 rounded-full bg-gray-300 text-white flex items-center justify-center text-sm font-bold">
+              3
+            </div>
+            <div>
+              <h3 className="font-semibold">Personalized Lessons</h3>
+              <p className="text-sm text-muted-foreground">
+                Get custom-generated units and lessons tailored to your needs
+              </p>
+            </div>
           </div>
         </div>
 
-        {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-sm text-red-600">{error}</p>
-          </div>
-        )}
-
-        <Button
-          onClick={handleGenerateAssessment}
-          disabled={isGenerating}
-          className="w-full"
-          size="lg"
-        >
-          {isGenerating ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Generating Assessment...
-            </>
+        <div className="space-y-3">
+          {!assessmentLessonId ? (
+            <Button
+              onClick={createAssessment}
+              disabled={isCreating}
+              className="w-full"
+              size="lg"
+            >
+              {isCreating ? "Creating Assessment..." : "Start AI Assessment"}
+            </Button>
           ) : (
-            "Start AI Assessment"
+            <Button
+              onClick={analyzeAndGenerate}
+              disabled={isAnalyzing}
+              className="w-full"
+              size="lg"
+            >
+              {isAnalyzing
+                ? "Generating Personalized Lessons..."
+                : "Generate My Lessons"}
+            </Button>
           )}
-        </Button>
+
+          {isAnalyzing && (
+            <div className="space-y-2">
+              <Progress value={66} className="w-full" />
+              <p className="text-sm text-center text-muted-foreground">
+                Analyzing your performance and creating personalized content...
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-blue-50 p-4 rounded-lg">
+          <h4 className="font-semibold text-blue-900 mb-2">
+            What makes this special?
+          </h4>
+          <ul className="text-sm text-blue-800 space-y-1">
+            <li>• Adapts to your current knowledge level</li>
+            <li>• Focuses on your weak areas first</li>
+            <li>• Creates unlimited practice content</li>
+            <li>• Follows proven language learning methodology</li>
+          </ul>
+        </div>
       </CardContent>
     </Card>
   );

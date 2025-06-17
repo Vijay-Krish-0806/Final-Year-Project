@@ -11,33 +11,70 @@ import { AssessmentStarter } from "../learn/ai/AssessmentStarter";
 type Props = {
   courses: (typeof courses.$inferSelect)[];
   activeCourseId?: typeof userProgress.$inferSelect.activeCourseId;
+  showAIAssessment?: boolean;
 };
 
-export const List = ({ courses, activeCourseId }: Props) => {
+export const List = ({
+  courses,
+  activeCourseId,
+  showAIAssessment = false,
+}: Props) => {
   const router = useRouter();
   const [pending, startTransistion] = useTransition();
-  const [showAssessment, setShowAssessment] = useState(false);
-  const [selectedCourse, setSelectedCourse] = useState({
-    id: 1,
-    language: "Spanish",
-  });
+  const [selectedCourseForAI, setSelectedCourseForAI] = useState<number | null>(
+    null
+  );
 
   const onClick = (id: number, title: string) => {
     if (pending) return;
 
     if (id === activeCourseId) {
-      setShowAssessment(true);
-      setSelectedCourse({ id: activeCourseId, language: title });
-      // return router.push("/learn");
+      return router.push("/learn");
     }
+
     startTransistion(() => {
       upsertUserProgress(id).catch(() => toast.error("Something went wrong"));
     });
   };
 
+  const handleAILearning = (courseId: number, courseName: string) => {
+    console.log(courseId)
+    setSelectedCourseForAI(courseId);
+  };
+
+  if (selectedCourseForAI) {
+    const course = courses.find((c) => c.id === selectedCourseForAI);
+    return (
+      <div className="flex flex-col items-center space-y-4">
+        <button
+          onClick={() => setSelectedCourseForAI(null)}
+          className="self-start text-blue-600 hover:text-blue-800"
+        >
+          ← Back to courses
+        </button>
+        <AssessmentStarter
+          courseId={selectedCourseForAI}
+          courseName={course?.title || ""}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-10">
-      <div className="pt-6 grid grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-4 ">
+      {showAIAssessment && (
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg border">
+          <h2 className="text-2xl font-bold mb-2">
+            🚀 New: AI-Powered Learning
+          </h2>
+          <p className="text-gray-600 mb-4">
+            Get personalized lessons created by AI based on your skill level and
+            learning pace.
+          </p>
+        </div>
+      )}
+
+      <div className="pt-6 grid grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-4">
         {courses.map((course) => (
           <Card
             key={course.id}
@@ -45,20 +82,16 @@ export const List = ({ courses, activeCourseId }: Props) => {
             title={course.title}
             imageSrc={course.imgSrc}
             onClick={onClick}
+            onAIClick={
+              showAIAssessment
+                ? () => handleAILearning(course.id, course.title)
+                : undefined
+            }
             disabled={pending}
             active={course.id === activeCourseId}
           />
         ))}
       </div>
-      {showAssessment && (
-        <AssessmentStarter
-          courseId={selectedCourse.id}
-          language={selectedCourse.language}
-          onAssessmentCreated={(data) => {
-            window.location.href = `/lesson/${data.lessonId}`;
-          }}
-        />
-      )}
     </div>
   );
 };
